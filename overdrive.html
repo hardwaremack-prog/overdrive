@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overdrive</title>
+<link rel="icon" href="/icon.svg">
+<style>
+:root{
+  --bg:#0b0d12;--panel:#141821;--panel2:#1a1f2b;--line:#262c3a;--text:#e8ebf2;--dim:#8a93a6;
+  --rasp:#e3295f;--rasp2:#ff5c8a;--leaf:#6cc04a;--amber:#ffb020;--cyan:#38c6ff;--violet:#9b7bff;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+.app{display:grid;grid-template-columns:210px 1fr;grid-template-rows:auto 1fr;height:100vh}
+header{grid-column:1/3;display:flex;align-items:center;gap:18px;padding:10px 18px;border-bottom:1px solid var(--line);
+  background:linear-gradient(90deg,#160a10,#0b0d12 40%)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.18em}
+.logo img{width:30px;height:30px}
+.logo small{display:block;font-weight:500;letter-spacing:0;color:var(--dim);font-size:11px}
+.chips{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip b{color:var(--rasp2);font-weight:700}
+.chip.bad{border-color:var(--amber);color:var(--amber)}
+nav{border-right:1px solid var(--line);padding:12px 10px;display:flex;flex-direction:column;gap:4px;overflow:auto}
+nav button{background:none;border:0;text-align:left;padding:10px 12px;border-radius:10px;color:var(--dim);display:flex;gap:10px;align-items:center}
+nav button:hover{background:var(--panel)}
+nav button.on{background:var(--panel2);color:var(--text);box-shadow:inset 3px 0 0 var(--rasp)}
+nav .od{margin-top:auto;background:linear-gradient(135deg,#7a0f30,#e3295f);color:#fff;font-weight:700;justify-content:center}
+nav .od.on{box-shadow:0 0 0 2px #fff3}
+main{overflow:auto;padding:18px}
+section{display:none}
+section.on{display:block}
+h2{margin:0 0 4px;font-size:22px}
+.sub{color:var(--dim);margin:0 0 16px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0}
+.card h3{margin:0 0 10px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.wide{grid-column:1/-1}
+.span2{grid-column:span 2}
+@media (max-width:900px){.app{grid-template-columns:1fr}nav{flex-direction:row;overflow:auto;border:0}.span2{grid-column:auto}header{grid-column:1}}
+.big{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.big small{font-size:14px;color:var(--dim);font-weight:500}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.kv dt{color:var(--dim)} .kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.bar{height:10px;background:#0006;border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--leaf),var(--amber),var(--rasp));background-size:300px 100%;transition:width .5s}
+.cores{display:grid;gap:8px}
+.core{display:grid;grid-template-columns:52px 1fr 92px;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+.core .bar{height:16px}
+.btn{background:var(--rasp);border:0;border-radius:10px;padding:10px 18px;font-weight:700;color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.prog{margin-top:10px}
+.prog .bar i{background:var(--cyan);transition:width .3s}
+.msg{color:var(--dim);font-size:12px;margin-top:4px;min-height:1.2em}
+canvas{display:block;width:100%}
+table{width:100%;border-collapse:collapse}
+td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;font-variant-numeric:tabular-nums}
+th{color:var(--dim);font-weight:600;font-size:12px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--panel2);font-size:12px;color:var(--dim)}
+.pill.ok{color:var(--leaf)} .pill.warn{color:var(--amber)}
+.result{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:12px}
+.result div{background:var(--panel2);border-radius:10px;padding:10px}
+.result b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.result span{color:var(--dim);font-size:12px}
+#gpuWrap,#odWrap{position:relative;border-radius:var(--r);overflow:hidden;background:#000;border:1px solid var(--line)}
+#gpuCanvas{height:56vh;min-height:320px}
+#odCanvas{height:42vh;min-height:260px}
+.hud{position:absolute;left:12px;top:10px;font:12px/1.5 ui-monospace,monospace;background:#000a;padding:6px 10px;border-radius:8px;pointer-events:none}
+label.ctl{display:flex;flex-direction:column;gap:4px;color:var(--dim);font-size:12px;min-width:160px}
+input[type=range]{accent-color:var(--rasp)}
+.header{display:grid;grid-template-columns:repeat(20,1fr);grid-template-rows:auto auto;gap:6px;background:#0a2a1a;padding:14px;border-radius:12px;border:1px solid #1d4a30}
+.pin{aspect-ratio:1;border-radius:50%;border:2px solid #c9a646;background:#222;display:grid;place-items:center;font-size:9px;color:#fff;position:relative}
+.pin.gnd{background:#111;border-color:#555}
+.pin.p5{background:#a01c1c}.pin.p3{background:#b56b10}
+.pin.gpio{background:#1e3a5f;cursor:pointer}
+.pin.gpio.hi{background:var(--leaf);box-shadow:0 0 10px var(--leaf)}
+.pin.gpio.out{border-color:var(--cyan)}
+.pin.sel{outline:2px solid #fff;outline-offset:2px}
+.pinlbl{font-size:10px;text-align:center;color:var(--dim)}
+.leds{display:grid;gap:8px}
+.led{display:flex;align-items:center;gap:10px;background:var(--panel2);padding:8px 10px;border-radius:10px}
+.led .dot{width:14px;height:14px;border-radius:50%;background:#333}
+.led .dot.on{background:var(--leaf);box-shadow:0 0 10px var(--leaf)}
+.led code{flex:1;overflow:hidden;text-overflow:ellipsis}
+.switch{width:42px;height:24px;border-radius:12px;background:#333;border:0;position:relative}
+.switch::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s}
+.switch.on{background:var(--rasp)} .switch.on::after{left:21px}
+.score{font-size:64px;font-weight:900;background:linear-gradient(90deg,var(--amber),var(--rasp2));-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.engage{font-size:20px;padding:16px 34px;border-radius:14px;background:linear-gradient(135deg,#7a0f30,#e3295f 60%,#ff8a3d);box-shadow:0 8px 30px #e3295f55}
+.count{font-size:42px;font-weight:900;font-variant-numeric:tabular-nums}
+.note{font-size:12px;color:var(--dim)}
+.list{max-height:340px;overflow:auto}
+.tabs{gap:6px;margin-bottom:12px}
+.tabs button{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--dim)}
+.tabs button.on{background:var(--rasp);border-color:var(--rasp);color:#fff}
+.cmp{display:grid;gap:5px}
+.cr{display:grid;grid-template-columns:minmax(120px,230px) 1fr 120px;gap:10px;align-items:center;font-size:13px}
+.cr .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cr .nm small{color:var(--dim)}
+.cr .tr{height:18px;background:#0005;border-radius:5px;overflow:hidden}
+.cr .fl{height:100%;border-radius:5px;background:#5a6378;transition:width .5s}
+.cr.me .fl{background:linear-gradient(90deg,#7a0f30,var(--rasp2))}
+.cr.new .fl{background:linear-gradient(90deg,#a06000,var(--amber))}
+.cr.me .nm,.cr.new .nm{font-weight:700}
+.cr .vl{text-align:right;font-variant-numeric:tabular-nums}
+.cr .vl small{display:block;color:var(--dim);font-size:11px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 10px;vertical-align:middle}
+.delta.up{color:var(--leaf)} .delta.dn{color:var(--amber)}
+.preset{cursor:default}
+.preset.on{outline:2px solid var(--rasp)}
+.preset code{display:block;font-size:11px;color:var(--cyan);margin:6px 0;white-space:pre}
+.mini{padding:4px 10px;font-size:12px;border-radius:8px}
+input.name{background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:8px 10px;font:inherit;flex:1;min-width:140px}
+@media (max-width:700px){.cr{grid-template-columns:100px 1fr 80px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo"><img src="/icon.svg" alt=""><div>OVERDRIVE<small id="hdrModel">Raspberry Pi hardware showcase</small></div></div>
+  <div class="chips">
+    <span class="chip">CPU <b data-l="cpu">–</b></span>
+    <span class="chip">ARM <b data-l="arm">–</b></span>
+    <span class="chip">GPU <b data-l="v3d">–</b></span>
+    <span class="chip">SoC <b data-l="temp">–</b></span>
+    <span class="chip">Power <b data-l="watts">–</b></span>
+    <span class="chip" id="thrChip">Throttle <b data-l="thr">–</b></span>
+  </div>
+</header>
+
+<nav id="nav">
+  <button data-v="dash" class="on">◉ Dashboard</button>
+  <button data-v="cpu">⚙ CPU · 4 cores</button>
+  <button data-v="gpu">◆ GPU · VideoCore VII</button>
+  <button data-v="mem">▤ Memory & Storage</button>
+  <button data-v="radio">📡 Network & Radios</button>
+  <button data-v="gpio">⋮⋮ GPIO header</button>
+  <button data-v="io">✦ Lights & Sound</button>
+  <button data-v="cmp">📊 Compare & OC</button>
+  <button data-v="od" class="od">⚡ OVERDRIVE</button>
+</nav>
+
+<main>
+<!-- ============ DASHBOARD ============ -->
+<section id="v-dash" class="on">
+  <h2 id="dashTitle">Your Raspberry Pi</h2>
+  <p class="sub" id="dashSub">Live readings straight from the SoC, firmware and kernel.</p>
+  <div class="grid">
+    <div class="card span2"><h3>CPU cores</h3><div class="cores" id="dashCores"></div></div>
+    <div class="card"><h3>SoC temperature</h3><canvas id="gTemp" height="150"></canvas></div>
+    <div class="card"><h3>Clocks</h3>
+      <dl class="kv">
+        <dt>ARM cores</dt><dd data-l="arm">–</dd>
+        <dt>GPU (V3D)</dt><dd data-l="v3d">–</dd>
+        <dt>Core bus</dt><dd data-l="core">–</dd>
+        <dt>Core voltage</dt><dd data-l="volts">–</dd>
+        <dt>Load average</dt><dd data-l="load">–</dd>
+        <dt>Uptime</dt><dd data-l="uptime">–</dd>
+      </dl></div>
+    <div class="card"><h3>Power (PMIC rails)</h3>
+      <div class="big" data-l="watts">–</div>
+      <div class="note">CPU core rail: <span data-l="corew">–</span> · summed from the power chip's own sensors</div>
+      <div class="note" id="thrText" style="margin-top:8px"></div>
+    </div>
+    <div class="card"><h3>Memory</h3>
+      <div class="big" data-l="memused">–</div>
+      <div class="bar" style="margin-top:8px"><i data-bar="mem"></i></div>
+      <div class="note" style="margin-top:6px">LPDDR4X · <span data-l="memtotal">–</span> total</div></div>
+    <div class="card"><h3>Traffic</h3>
+      <dl class="kv">
+        <dt>Network ↓</dt><dd data-l="rx">–</dd><dt>Network ↑</dt><dd data-l="tx">–</dd>
+        <dt>Disk read</dt><dd data-l="dr">–</dd><dt>Disk write</dt><dd data-l="dw">–</dd>
+      </dl></div>
+    <div class="card wide"><h3>Last 3 minutes</h3><canvas id="histChart" height="170"></canvas>
+      <div class="row note" style="margin-top:6px"><span style="color:var(--rasp2)">■ temp °C</span><span style="color:var(--cyan)">■ CPU %</span><span style="color:var(--amber)">■ watts ×10</span></div></div>
+    <div class="card"><h3>Board</h3><dl class="kv" id="boardKv"></dl></div>
+    <div class="card"><h3>Displays</h3><div id="dispList" class="note">–</div></div>
+    <div class="card"><h3>USB devices</h3><div id="usbList" class="note">–</div></div>
+  </div>
+</section>
+
+<!-- ============ CPU ============ -->
+<section id="v-cpu">
+  <h2>CPU · quad Cortex-A76</h2>
+  <p class="sub">Sprint one core, then fire all four at once, each in its own process, so you can see real parallel scaling.</p>
+  <div class="grid">
+    <div class="card span2"><h3>Live per-core load & clock</h3><div class="cores" id="cpuCores"></div></div>
+    <div class="card"><h3>Benchmark</h3>
+      <div class="row"><button class="btn" id="cpuRun">Run CPU benchmark</button></div>
+      <div class="prog" id="prog-cpu"><div class="bar"><i></i></div><div class="msg"></div></div>
+      <div class="note">Mandelbrot maths, pure Python, one process per core. Watch the clock and temperature climb.</div>
+    </div>
+    <div class="card wide"><h3>Results</h3><div class="result" id="cpuRes"><div><span>Not run yet</span></div></div>
+      <canvas id="cpuBars" height="120" style="margin-top:12px"></canvas></div>
+  </div>
+</section>
+
+<!-- ============ GPU ============ -->
+<section id="v-gpu">
+  <h2>GPU · VideoCore VII</h2>
+  <p class="sub">A real-time ray-marched scene: smooth metaballs, soft shadows, reflections and fog, every pixel computed on the GPU.</p>
+  <div id="gpuWrap"><canvas id="gpuCanvas"></canvas><div class="hud" id="gpuHud">Paused. Press ▶ Start render</div></div>
+  <div class="row" style="margin-top:12px;gap:22px">
+    <button class="btn" id="gpuToggle">▶ Start render</button>
+    <label class="ctl">Render resolution <input type="range" id="gpuRes" min="0.2" max="1" step="0.05" value="0.4"><span id="gpuResV"></span></label>
+    <label class="ctl">Ray steps <input type="range" id="gpuSteps" min="24" max="200" step="4" value="64"><span id="gpuStepsV"></span></label>
+    <label class="ctl">Blobs <input type="range" id="gpuBalls" min="2" max="16" step="1" value="6"><span id="gpuBallsV"></span></label>
+    <label class="ctl">Reflections <select id="gpuRefl"><option value="0">Off</option><option value="1" selected>On</option></select></label>
+  </div>
+  <p class="note" id="gpuInfo" style="margin-top:10px"></p>
+  <p class="note">The GPU also draws your desktop and mouse pointer, so heavy settings make the pointer lag. Rendering stops when you leave this tab.</p>
+</section>
+
+<!-- ============ COMPARE & OC ============ -->
+<section id="v-cmp">
+  <h2>📊 Compare & overclock</h2>
+  <p class="sub">See how your Pi stacks up against older computers. Save a run at stock clocks, overclock, run again, and compare yourself to yourself.</p>
+  <div class="grid">
+    <div class="card"><h3>Full benchmark</h3>
+      <button class="btn" id="benchRun">Run full benchmark (~45 s)</button>
+      <div class="prog" id="prog-bench"><div class="bar"><i></i></div><div class="msg"></div></div>
+      <div class="note">CPU single + all cores, RAM, storage, and a GPU test that isn't limited by your screen's refresh rate.</div>
+      <div id="benchOut"></div></div>
+    <div class="card span2"><h3>How you stack up</h3>
+      <div id="headline" class="note" style="font-size:14px;color:var(--text);margin-bottom:10px"></div>
+      <div class="row tabs" id="metricTabs"></div>
+      <div id="cmpBars" class="cmp"></div>
+      <div class="row note" style="margin-top:8px;justify-content:space-between">
+        <span><span class="sw" style="background:#5a6378"></span>reference (estimated) <span class="sw" style="background:var(--rasp)"></span>your saved runs <span class="sw" style="background:var(--amber)"></span>unsaved result</span>
+        <label><input type="checkbox" id="logScale" checked> log scale</label></div>
+      <p class="note" id="calNote"></p></div>
+    <div class="card wide"><h3>Your saved runs</h3><div class="list" style="max-height:none"><table id="runsTbl"></table></div>
+      <p class="note">★ = your stock baseline. Every other run shows how much faster or slower it is than the baseline. Saved in ~/.config/overdrive/runs.json.</p></div>
+    <div class="card wide"><h3>Overclock presets</h3>
+      <div id="ocNow" class="note" style="margin-bottom:10px"></div>
+      <div class="result" id="ocPresets" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))"></div>
+      <div class="prog" id="prog-oc"><div class="bar"><i></i></div><div class="msg"></div></div>
+      <div class="row" id="rebootRow" style="display:none;margin-top:10px"><span>Saved. The new clocks start after a reboot.</span><button class="btn" id="rebootBtn">Reboot now</button></div>
+      <details style="margin-top:12px"><summary class="note" style="cursor:pointer">Safety & doing it by hand</summary>
+        <ul class="note">
+          <li>The Pi 500 cools its chip through the keyboard's metal plate, with no fan. Watch the peak temperature and the throttle column. If it throttles, the overclock isn't helping.</li>
+          <li>Overdrive adds its own marked block to the end of <code id="cfgPath">config.txt</code> and keeps a backup next to it called <code>config.txt.overdrive-bak</code>.</li>
+          <li>To do it by hand: <code>sudo nano /boot/firmware/config.txt</code>, add the preset's lines at the very end under <code>[all]</code>, save, then reboot.</li>
+          <li><b>If it won't boot:</b> put the SD card in another computer, open the <b>bootfs</b> drive, and delete the lines between <code># >>> Overdrive OC >>></code> and <code># <<< Overdrive OC <<<</code> in config.txt.</li>
+        </ul></details></div>
+  </div>
+</section>
+
+<!-- ============ MEMORY & STORAGE ============ -->
+<section id="v-mem">
+  <h2>Memory & Storage</h2>
+  <p class="sub">How fast data moves between the cores, the caches, the RAM chips and your storage.</p>
+  <div class="grid">
+    <div class="card"><h3>RAM bandwidth</h3>
+      <button class="btn" id="memRun">Test memory</button>
+      <div class="prog" id="prog-mem"><div class="bar"><i></i></div><div class="msg"></div></div>
+      <div class="result" id="memRes"></div></div>
+    <div class="card"><h3>Storage speed</h3>
+      <div class="row"><button class="btn" id="diskRun">Test storage</button>
+        <select id="diskMb"><option>256</option><option selected>512</option><option>1024</option></select><span class="note">MB</span></div>
+      <div class="prog" id="prog-disk"><div class="bar"><i></i></div><div class="msg"></div></div>
+      <div class="result" id="diskRes"></div>
+      <div class="note">Writes a temporary file in your home folder, then deletes it.</div></div>
+    <div class="card wide"><h3>Drives</h3><table id="driveTbl"></table></div>
+  </div>
+</section>
+
+<!-- ============ RADIO ============ -->
+<section id="v-radio">
+  <h2>Network & Radios</h2>
+  <p class="sub">Dual-band Wi-Fi, Bluetooth 5 / BLE and Gigabit Ethernet.</p>
+  <div class="grid">
+    <div class="card span2"><h3>Wi-Fi radar</h3>
+      <div class="row"><button class="btn" id="wifiRun">Scan Wi-Fi</button><span class="note" id="wifiCount"></span></div>
+      <div class="prog" id="prog-wifi"><div class="bar"><i></i></div><div class="msg"></div></div>
+      <canvas id="radar" height="300"></canvas></div>
+    <div class="card"><h3>Speed & latency</h3>
+      <button class="btn" id="netRun">Run network test</button>
+      <div class="prog" id="prog-net"><div class="bar"><i></i></div><div class="msg"></div></div>
+      <div class="result" id="netRes"></div></div>
+    <div class="card span2"><h3>Wi-Fi networks</h3><div class="list"><table id="wifiTbl"></table></div></div>
+    <div class="card"><h3>Bluetooth scan</h3>
+      <button class="btn" id="btRun">Scan Bluetooth</button>
+      <div class="prog" id="prog-bt"><div class="bar"><i></i></div><div class="msg"></div></div>
+      <div class="list"><table id="btTbl"></table></div></div>
+    <div class="card wide"><h3>Interfaces</h3><table id="ifTbl"></table></div>
+  </div>
+</section>
+
+<!-- ============ GPIO ============ -->
+<section id="v-gpio">
+  <h2>40-pin GPIO header</h2>
+  <p class="sub">Live state of every pin on the back of the keyboard, read through the RP1 I/O chip. Lit pins are reading HIGH.</p>
+  <div class="card">
+    <div id="hdr" class="header"></div>
+    <div class="row note" style="margin-top:10px;gap:16px">
+      <span><span class="pill" style="background:#a01c1c;color:#fff">5V</span> <span class="pill" style="background:#b56b10;color:#fff">3V3</span> <span class="pill">GND</span> <span class="pill" style="background:#1e3a5f;color:#fff">GPIO</span></span>
+      <span>Pin 1 is top-left. Outlined pins are outputs.</span>
+    </div>
+  </div>
+  <div class="grid" style="margin-top:14px">
+    <div class="card"><h3>Selected pin</h3><div id="pinInfo" class="note">Click any blue pin.</div>
+      <div class="row" style="margin-top:10px">
+        <button class="switch" id="gpioUnlock" title="Allow driving pins"></button><span class="note">Allow output control</span></div>
+      <div class="row" style="margin-top:10px" id="pinCtl">
+        <button class="btn ghost" data-m="high">Output HIGH</button><button class="btn ghost" data-m="low">Output LOW</button>
+        <button class="btn ghost" data-m="input">Input</button><button class="btn ghost" data-m="pullup">Input + pull-up</button>
+      </div>
+      <p class="note">Only drive pins you have wired for it. Try an LED + 330 Ω resistor from GPIO17 (pin 11) to GND (pin 9).</p></div>
+    <div class="card span2"><h3>All GPIOs</h3><div class="list"><table id="gpioTbl"></table></div></div>
+  </div>
+</section>
+
+<!-- ============ LIGHTS & SOUND ============ -->
+<section id="v-io">
+  <h2>Lights & Sound</h2>
+  <p class="sub">Every LED the kernel exposes, including the keyboard's lock lights, plus audio out over HDMI, USB or Bluetooth.</p>
+  <div class="grid">
+    <div class="card"><h3>LEDs</h3>
+      <div class="row"><button class="btn" id="ledRun">Light show</button></div>
+      <div class="prog" id="prog-leds"><div class="bar"><i></i></div><div class="msg"></div></div>
+      <div class="leds" id="ledList"></div>
+      <p class="note" id="ledNote"></p></div>
+    <div class="card span2"><h3>Synth & scope</h3>
+      <div class="row"><button class="btn" id="synthRun">Play demo</button>
+        <label class="ctl">Volume <input type="range" id="vol" min="0" max="1" step="0.05" value="0.35"></label></div>
+      <canvas id="scope" height="180" style="margin-top:10px"></canvas>
+      <p class="note">Generated live with the Web Audio engine. The Pi 500 has no headphone jack, so sound goes to your HDMI display, USB speakers or a Bluetooth speaker.</p></div>
+    <div class="card wide"><h3>Keyboard</h3>
+      <p class="note">The Pi 500 <em>is</em> the keyboard. Type anything to light it up here.</p>
+      <div id="keys" class="row" style="min-height:44px"></div></div>
+  </div>
+</section>
+
+<!-- ============ OVERDRIVE ============ -->
+<section id="v-od">
+  <h2>⚡ Overdrive mode</h2>
+  <p class="sub">Everything at once for 20 seconds: all four cores flat out, the GPU at maximum detail, the LEDs strobing. Then a memory blast, and you get a score.</p>
+  <div class="grid">
+    <div class="card wide" style="text-align:center">
+      <button class="btn engage" id="engage">ENGAGE OVERDRIVE</button>
+      <div class="count" id="odCount" style="margin-top:12px"></div>
+      <div class="msg" id="odMsg"></div>
+    </div>
+    <div class="card span2" style="padding:0"><div id="odWrap"><canvas id="odCanvas"></canvas><div class="hud" id="odHud">GPU idle</div></div></div>
+    <div class="card"><h3>Live</h3>
+      <dl class="kv">
+        <dt>CPU total</dt><dd data-l="cpu">–</dd><dt>ARM clock</dt><dd data-l="arm">–</dd>
+        <dt>GPU clock</dt><dd data-l="v3d">–</dd><dt>SoC temp</dt><dd data-l="temp">–</dd>
+        <dt>Power</dt><dd data-l="watts">–</dd><dt>Throttle</dt><dd data-l="thr">–</dd>
+      </dl>
+      <div class="cores" id="odCores" style="margin-top:12px"></div></div>
+    <div class="card wide" id="odReport" style="display:none"><h3>Report card</h3>
+      <div class="score" id="odScore">0</div><div class="note">Overdrive score</div>
+      <div class="result" id="odRes"></div></div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const api=(p,o)=>fetch(p,o).then(r=>r.json());
+const post=(p,b)=>api(p,{method:'POST',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+const fmtB=b=>b==null?'–':b<1024?b.toFixed(0)+' B':b<1048576?(b/1024).toFixed(1)+' KB':b<1073741824?(b/1048576).toFixed(1)+' MB':(b/1073741824).toFixed(2)+' GB';
+const fmtRate=b=>b==null?'–':fmtB(b)+'/s';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let INFO={}, LIVE={}, VIEW='dash';
+
+/* ---------------- navigation ---------------- */
+$$('#nav button').forEach(b=>b.onclick=()=>show(b.dataset.v));
+function show(v){
+  VIEW=v;
+  $$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  $$('main section').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+  if(v!=='gpu'){ gpuMain.stop(); $('#gpuToggle').textContent='▶ Start render'; }
+  if(v==='cmp') loadCompare();
+  if(v==='gpio') gpioPoll();
+  if(v==='io') loadLeds();
+  if(v==='mem') renderDrives();
+  if(v==='radio') renderIfaces();
+}
+
+/* ---------------- canvas helpers ---------------- */
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=devicePixelRatio||1;
+  const w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round((+c.getAttribute('height')||r.height)*d));
+  if(c.width!==w||c.height!==h){c.width=w;c.height=h;c.style.height=(h/d)+'px'}
+  const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return [x,w/d,h/d]}
+function gauge(c,val,min,max,label,unit){
+  const [x,w,h]=fitCanvas(c);x.clearRect(0,0,w,h);
+  const cx=w/2,cy=h*0.82,R=Math.min(w/2-14,h*0.72),a0=Math.PI,a1=2*Math.PI;
+  x.lineWidth=16;x.lineCap='round';x.strokeStyle='#262c3a';x.beginPath();x.arc(cx,cy,R,a0,a1);x.stroke();
+  if(val!=null){const f=Math.max(0,Math.min(1,(val-min)/(max-min)));
+    const g=x.createLinearGradient(cx-R,0,cx+R,0);g.addColorStop(0,'#6cc04a');g.addColorStop(.6,'#ffb020');g.addColorStop(1,'#e3295f');
+    x.strokeStyle=g;x.beginPath();x.arc(cx,cy,R,a0,a0+f*Math.PI);x.stroke()}
+  x.fillStyle='#e8ebf2';x.font='800 30px system-ui';x.textAlign='center';
+  x.fillText(val==null?'–':val.toFixed(1)+unit,cx,cy-8);
+  x.fillStyle='#8a93a6';x.font='12px system-ui';x.fillText(label,cx,cy+14);
+}
+function lines(c,series){
+  const [x,w,h]=fitCanvas(c);x.clearRect(0,0,w,h);
+  x.strokeStyle='#262c3a';x.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=4+(h-8)*i/4;x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke()}
+  for(const [arr,max,col] of series){ if(!arr||!arr.length) continue;
+    x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+    arr.forEach((v,i)=>{const X=w*(i+180-arr.length)/179,Y=h-4-(h-8)*Math.min(1,(v||0)/max);i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()}
+}
+
+/* ---------------- cores widget ---------------- */
+function coreRows(el,n){ if(el.childElementCount===n) return;
+  el.innerHTML=Array.from({length:n},(_,i)=>`<div class="core"><span>Core ${i}</span><div class="bar"><i></i></div><span class="note" style="text-align:right"></span></div>`).join('')}
+function paintCores(el,L){ const c=(L.cpu||[]).slice(1); if(!c.length) return; coreRows(el,c.length);
+  [...el.children].forEach((row,i)=>{row.querySelector('i').style.width=c[i]+'%';
+    row.lastChild.textContent=`${c[i].toFixed(0)}% · ${L.freqs&&L.freqs[i]?(L.freqs[i]/1000).toFixed(2)+' GHz':''}`})}
+
+/* ---------------- live polling ---------------- */
+async function tick(first){
+  try{ LIVE=await api('/api/live'+(first?'?hist':'')); }catch(e){ return }
+  const L=LIVE, set=(k,v)=>$$(`[data-l="${k}"]`).forEach(e=>e.textContent=v);
+  set('cpu',L.cpu?L.cpu[0].toFixed(0)+'%':'–');
+  set('arm',L.arm?(L.arm/1000).toFixed(2)+' GHz':'–');
+  set('v3d',L.v3d?L.v3d+' MHz':'–');
+  set('core',L.core?L.core+' MHz':'–');
+  set('temp',L.temp!=null?L.temp.toFixed(1)+' °C':'–');
+  set('watts',L.watts!=null?L.watts.toFixed(2)+' W':'n/a');
+  set('corew',L.core_watts!=null?L.core_watts.toFixed(2)+' W':'n/a');
+  set('volts',L.volts?L.volts.toFixed(3)+' V':'–');
+  set('load',L.load?L.load.map(v=>v.toFixed(2)).join('  '):'–');
+  set('uptime',L.uptime?fmtUp(L.uptime):'–');
+  if(L.mem){set('memused',fmtB(L.mem.used));set('memtotal',fmtB(L.mem.total));$$('[data-bar="mem"]').forEach(e=>e.style.width=L.mem.pct+'%')}
+  if(L.net){set('rx',fmtRate(L.net.rx));set('tx',fmtRate(L.net.tx))}
+  if(L.disk){set('dr',fmtRate(L.disk.r));set('dw',fmtRate(L.disk.w))}
+  const T=L.throttled; set('thr',!T?'n/a':T.now.length?T.now[0]:'none');
+  $('#thrChip').classList.toggle('bad',!!(T&&T.now.length));
+  $('#thrText').textContent=T?(T.now.length?'⚠ Now: '+T.now.join(', '):'✓ No throttling right now')+(T.past.length?' · Since boot: '+T.past.join(', '):''):'';
+  paintCores($('#dashCores'),L); paintCores($('#cpuCores'),L); paintCores($('#odCores'),L);
+  if(VIEW==='dash'){ gauge($('#gTemp'),L.temp,30,90,'SoC temperature','°'); }
+  if(first&&L.hist) HIST=L.hist; else { for(const k of ['temp','cpu','watts']){HIST[k].push(k==='cpu'?(L.cpu||[0])[0]:L[k]);HIST[k]=HIST[k].slice(-180)} }
+  if(VIEW==='dash') lines($('#histChart'),[[HIST.temp,90,'#ff5c8a'],[HIST.cpu,100,'#38c6ff'],[HIST.watts.map(v=>v==null?null:v*10),100,'#ffb020']]);
+}
+let HIST={temp:[],cpu:[],watts:[]};
+const fmtUp=s=>{const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return (d?d+'d ':'')+h+'h '+m+'m'};
+
+/* ---------------- info ---------------- */
+async function loadInfo(){
+  INFO=await api('/api/info');
+  $('#hdrModel').textContent=INFO.model;
+  $('#dashTitle').textContent=INFO.model;
+  $('#dashSub').textContent=`${INFO.os} · kernel ${INFO.kernel} · ${INFO.hostname}`;
+  const kv=[['SoC / CPU',INFO.cpu_model],['Cores',INFO.cores],['Max clock',INFO.max_mhz?INFO.max_mhz+' MHz':'–'],
+    ['Board rev',INFO.revision||'–'],['Architecture',INFO.arch],['Firmware',INFO.firmware||'–'],['IP',(INFO.ip||[]).join(', ')||'–'],['Python',INFO.python]];
+  $('#boardKv').innerHTML=kv.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+  $('#dispList').innerHTML=(INFO.displays||[]).length?INFO.displays.map(d=>`<div class="row" style="justify-content:space-between"><span>${esc(d.port)}</span><span class="pill ${d.status==='connected'?'ok':''}">${d.status==='connected'?esc(d.mode||'connected'):'empty'}</span></div>`).join(''):'No display info';
+  $('#usbList').innerHTML=(INFO.usb||[]).length?INFO.usb.map(u=>`<div>${esc(u.name)} <span class="pill">${esc(u.id)}</span></div>`).join(''):'None detected';
+}
+function renderDrives(){
+  const rows=(INFO.storage||[]).flatMap(d=>[`<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.model||d.tran||'')}</td><td>${fmtB(d.size)}</td><td></td></tr>`,
+    ...d.parts.map(p=>`<tr><td class="note">↳ ${esc(p.name)}</td><td class="note">${esc(p.fs||'')}</td><td>${fmtB(p.size)}</td><td class="note">${esc(p.mount||'')}</td></tr>`)]);
+  $('#driveTbl').innerHTML='<tr><th>Device</th><th>Model / FS</th><th>Size</th><th>Mounted</th></tr>'+rows.join('');
+}
+function renderIfaces(){
+  $('#ifTbl').innerHTML='<tr><th>Interface</th><th>Type</th><th>State</th><th>Link</th><th>MAC</th></tr>'+(INFO.nets||[]).map(n=>
+    `<tr><td>${esc(n.name)}</td><td>${n.wireless?'Wi-Fi':n.name.startsWith('eth')||n.name.startsWith('en')?'Ethernet':'Other'}</td><td><span class="pill ${n.state==='up'?'ok':''}">${esc(n.state)}</span></td><td>${n.speed>0?n.speed+' Mb/s':'–'}</td><td class="note">${esc(n.mac)}</td></tr>`).join('');
+}
+
+/* ---------------- jobs ---------------- */
+function jobUI(name,j){const p=$('#prog-'+name); if(!p) return;
+  p.querySelector('i').style.width=(j.progress||0)+'%';
+  p.querySelector('.msg').textContent=j.state==='error'?'⚠ '+j.msg:j.state==='done'?'Done':j.msg||''}
+async function run(name,params={},btn,cb){
+  if(btn) btn.disabled=true;
+  await post(`/api/run/${name}?`+new URLSearchParams(params));
+  return new Promise(res=>{const t=setInterval(async()=>{const j=await api('/api/job/'+name);jobUI(name,j);if(cb)cb(j);
+    if(j.state!=='running'){clearInterval(t);if(btn)btn.disabled=false;res(j)}},400)})}
+const tile=(v,l)=>`<div><b>${v}</b><span>${l}</span></div>`;
+
+/* CPU */
+$('#cpuRun').onclick=async()=>{const j=await run('cpu',{seconds:6},$('#cpuRun')); if(j.state!=='done') return;
+  const r=j.result; $('#cpuRes').innerHTML=tile((r.single/1000).toFixed(1)+'k','single-core points/s')+tile((r.multi/1000).toFixed(1)+'k','all-core points/s')
+   +tile(r.scaling.toFixed(2)+'×','multi-core scaling')+tile(r.cores,'cores')+tile(LIVE.peaks?LIVE.peaks.temp+' °C':'–','peak temp');
+  const [x,w,h]=fitCanvas($('#cpuBars'));x.clearRect(0,0,w,h);const mx=Math.max(...r.per_core,r.single);
+  r.per_core.forEach((v,i)=>{const bh=(h-24)*v/mx,bw=w/r.per_core.length-16,X=i*(bw+16)+8;
+    const g=x.createLinearGradient(0,h,0,h-bh);g.addColorStop(0,'#7a0f30');g.addColorStop(1,'#ff5c8a');x.fillStyle=g;
+    x.fillRect(X,h-16-bh,bw,bh);x.fillStyle='#8a93a6';x.font='12px system-ui';x.textAlign='center';x.fillText('Core '+i+' · '+(v/1000).toFixed(1)+'k',X+bw/2,h-2)})};
+
+/* Memory / disk */
+$('#memRun').onclick=async()=>{const j=await run('mem',{},$('#memRun')); if(j.state==='done'){const r=j.result;
+  $('#memRes').innerHTML=tile(r.dram_gbs+' GB/s','RAM copy')+tile(r.cache_gbs+' GB/s','cache copy')+tile((r.cache_gbs/r.dram_gbs).toFixed(1)+'×','cache advantage')}};
+$('#diskRun').onclick=async()=>{const j=await run('disk',{mb:$('#diskMb').value},$('#diskRun')); if(j.state==='done'){const r=j.result;
+  $('#diskRes').innerHTML=tile(r.write_mbs+' MB/s','sequential write')+tile(r.read_mbs+' MB/s','sequential read')+tile(r.iops,'random 4K reads/s')}};
+
+/* Network */
+let WIFI=[], radarT=0;
+$('#wifiRun').onclick=async()=>{const j=await run('wifi',{},$('#wifiRun')); if(j.state!=='done') return;
+  WIFI=j.result.networks; $('#wifiCount').textContent=WIFI.length+' networks';
+  $('#wifiTbl').innerHTML='<tr><th>SSID</th><th>Signal</th><th>Ch</th><th>Band</th><th>Security</th></tr>'+WIFI.map(n=>
+   `<tr><td>${n.active?'★ ':''}${esc(n.ssid)}</td><td><div class="bar" style="width:90px;display:inline-block;vertical-align:middle"><i style="width:${n.signal}%"></i></div> ${n.signal}</td><td>${esc(n.chan)}</td><td>${parseInt(n.freq)>4000?'5 GHz':'2.4 GHz'}</td><td class="note">${esc(n.security)}</td></tr>`).join('')};
+function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)}
+function drawRadar(t){ if(VIEW!=='radio') return;
+  const c=$('#radar'),[x,w,h]=fitCanvas(c),cx=w/2,cy=h/2,R=Math.min(w,h)/2-10;x.clearRect(0,0,w,h);
+  x.strokeStyle='#1d4a30';for(let i=1;i<=4;i++){x.beginPath();x.arc(cx,cy,R*i/4,0,7);x.stroke()}
+  const a=t/900%(Math.PI*2);const g=x.createConicGradient?x.createConicGradient(a-0.6,cx,cy):null;
+  if(g){g.addColorStop(0,'#6cc04a00');g.addColorStop(0.1,'#6cc04a55');g.addColorStop(0.101,'#0000');x.fillStyle=g;x.beginPath();x.arc(cx,cy,R,0,7);x.fill()}
+  x.fillStyle='#e3295f';x.beginPath();x.arc(cx,cy,5,0,7);x.fill();
+  WIFI.forEach(n=>{const ang=hash(n.bssid)%628/100,d=R*(1-n.signal/100)*0.95+12;const X=cx+Math.cos(ang)*d,Y=cy+Math.sin(ang)*d;
+    const five=parseInt(n.freq)>4000;x.fillStyle=n.active?'#ffb020':five?'#38c6ff':'#6cc04a';x.beginPath();x.arc(X,Y,4+n.signal/25,0,7);x.fill();
+    x.fillStyle='#e8ebf2';x.font='11px system-ui';x.textAlign='center';x.fillText(n.ssid.slice(0,18),X,Y-10)});
+  x.fillStyle='#8a93a6';x.textAlign='left';x.font='11px system-ui';x.fillText('● 2.4 GHz',8,h-24);x.fillStyle='#38c6ff';x.fillText('● 5 GHz',8,h-10);
+}
+$('#netRun').onclick=async()=>{const j=await run('net',{},$('#netRun')); if(j.state!=='done') return; const r=j.result;
+  $('#netRes').innerHTML=(r.download_mbps!=null?tile(r.download_mbps+' Mb/s','internet download'):tile('–',esc(r.download_error||'download failed')))
+   +(r.gateway&&r.gateway.avg!=null?tile(r.gateway.avg.toFixed(1)+' ms','router ping'):'')+(r.internet&&r.internet.avg!=null?tile(r.internet.avg.toFixed(1)+' ms','internet ping'):'')
+   +(r.eth_link?tile(r.eth_link+' Mb/s','Ethernet link'):'')};
+$('#btRun').onclick=async()=>{const j=await run('bt',{seconds:12},$('#btRun')); if(j.state!=='done') return;
+  $('#btTbl').innerHTML='<tr><th>Device</th><th>RSSI</th></tr>'+j.result.devices.map(d=>`<tr><td>${esc(d.name)}<div class="note">${d.mac}</div></td><td>${d.rssi!=null?d.rssi+' dBm':'–'}</td></tr>`).join('')
+   ||'<tr><td class="note">Nothing found nearby</td></tr>'};
+
+/* ---------------- GPIO ---------------- */
+const HDR=['3V3','5V',2,'5V',3,'GND',4,14,'GND',15,17,18,27,'GND',22,23,'3V3',24,10,'GND',9,25,11,8,'GND',7,0,1,5,'GND',6,12,13,'GND',19,16,26,20,'GND',21];
+let GPIO={}, SEL=null, gpioTimer=null;
+(function buildHeader(){ const top=[],bot=[];
+  HDR.forEach((p,i)=>{const cls=typeof p==='number'?'gpio':p==='GND'?'gnd':p==='5V'?'p5':'p3';
+    const el=`<div class="pin ${cls}" data-g="${typeof p==='number'?p:''}" title="Pin ${i+1}: ${typeof p==='number'?'GPIO'+p:p}">${typeof p==='number'?p:''}</div>`;
+    (i%2?bot:top).push(el)});   // odd physical pins (1,3..) on the top row, even pins below
+  $('#hdr').innerHTML=top.join('')+bot.join('');
+  $$('#hdr .pin.gpio').forEach(e=>e.onclick=()=>{SEL=+e.dataset.g;paintGpio()});
+})();
+async function gpioPoll(){ clearTimeout(gpioTimer); if(VIEW!=='gpio') return;
+  try{GPIO=await api('/api/gpio')}catch(e){} paintGpio(); gpioTimer=setTimeout(gpioPoll,800)}
+function paintGpio(){ const P=GPIO.pins||{};
+  $$('#hdr .pin.gpio').forEach(e=>{const s=P[e.dataset.g];e.classList.toggle('hi',!!(s&&s.level));e.classList.toggle('out',!!(s&&s.mode==='op'));e.classList.toggle('sel',+e.dataset.g===SEL)});
+  if(!GPIO.available){$('#pinInfo').textContent='pinctrl not found - GPIO view needs Raspberry Pi OS.';return}
+  if(SEL!=null&&P[SEL]){const s=P[SEL],phys=HDR.indexOf(SEL)+1;
+    $('#pinInfo').innerHTML=`<div class="big">GPIO${SEL} <small>physical pin ${phys}</small></div>Level <b>${s.level?'HIGH':'LOW'}</b> · mode <b>${esc(s.mode)}</b> · pull <b>${esc(s.pull||'none')}</b><div class="note">${esc(s.desc)}</div>`}
+  $('#gpioTbl').innerHTML='<tr><th>GPIO</th><th>Pin</th><th>Mode</th><th>Pull</th><th>Level</th><th>Function</th></tr>'+Object.entries(P).map(([g,s])=>
+    `<tr><td>${g}</td><td>${HDR.indexOf(+g)+1}</td><td>${esc(s.mode)}</td><td>${esc(s.pull)}</td><td><span class="pill ${s.level?'ok':''}">${s.level?'HIGH':'low'}</span></td><td class="note">${esc(s.desc)}</td></tr>`).join('');
+  $$('#pinCtl button').forEach(b=>b.disabled=!($('#gpioUnlock').classList.contains('on')&&SEL!=null));
+}
+$('#gpioUnlock').onclick=e=>{e.currentTarget.classList.toggle('on');paintGpio()};
+$$('#pinCtl button').forEach(b=>b.onclick=async()=>{GPIO=await post('/api/gpio',{pin:SEL,mode:b.dataset.m});paintGpio()});
+
+/* ---------------- LEDs ---------------- */
+async function loadLeds(){ const L=await api('/api/leds');
+  $('#ledList').innerHTML=L.map(l=>`<div class="led"><span class="dot ${l.on?'on':''}"></span><code>${esc(l.name)}</code><span class="note">${esc(l.trigger)}</span>
+     <button class="switch ${l.on?'on':''}" data-n="${esc(l.name)}" ${l.writable?'':'disabled title="no permission"'}></button></div>`).join('')||'<div class="note">No LEDs exposed.</div>';
+  $$('#ledList .switch').forEach(s=>s.onclick=async()=>{await post('/api/led',{name:s.dataset.n,on:!s.classList.contains('on')});loadLeds()});
+  $('#ledNote').textContent=L.some(l=>!l.writable)?'Some LEDs are locked. Run install.sh once and accept the LED permission step to unlock them.':'';
+}
+$('#ledRun').onclick=async()=>{await run('leds',{seconds:10},$('#ledRun'));loadLeds()};
+
+/* ---------------- Audio ---------------- */
+let AC,AN,MASTER;
+function audio(){ if(AC) return; AC=new AudioContext(); MASTER=AC.createGain(); AN=AC.createAnalyser(); AN.fftSize=2048;
+  MASTER.connect(AN);AN.connect(AC.destination); MASTER.gain.value=+$('#vol').value; scope()}
+$('#vol').oninput=e=>MASTER&&(MASTER.gain.value=+e.target.value);
+function note(f,t,d,type='sawtooth'){const o=AC.createOscillator(),g=AC.createGain(),fl=AC.createBiquadFilter();
+  o.type=type;o.frequency.value=f;fl.type='lowpass';fl.frequency.setValueAtTime(400,t);fl.frequency.exponentialRampToValueAtTime(4000,t+d*0.3);fl.frequency.exponentialRampToValueAtTime(300,t+d);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.3,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+d);
+  o.connect(fl);fl.connect(g);g.connect(MASTER);o.start(t);o.stop(t+d+.05)}
+$('#synthRun').onclick=()=>{audio();AC.resume();const t0=AC.currentTime+.05,mtof=m=>440*2**((m-69)/12);
+  const prog=[[57,60,64,69],[53,57,60,65],[48,52,55,60],[55,59,62,67]];
+  prog.forEach((ch,b)=>{for(let s=0;s<16;s++){note(mtof(ch[s%4]+12*(s>>2&1)),t0+b*2+s*.125,.22)} note(mtof(ch[0]-24),t0+b*2,1.9,'square')})};
+function scope(){ requestAnimationFrame(scope); if(VIEW!=='io'||!AN) return;
+  const [x,w,h]=fitCanvas($('#scope')),d=new Uint8Array(AN.fftSize),f=new Uint8Array(AN.frequencyBinCount);AN.getByteTimeDomainData(d);AN.getByteFrequencyData(f);
+  x.clearRect(0,0,w,h);const bw=w/96;for(let i=0;i<96;i++){const v=f[i*4]/255;x.fillStyle=`hsl(${340-i*2},80%,${30+v*30}%)`;x.fillRect(i*bw,h-v*h,bw-1,v*h)}
+  x.strokeStyle='#e8ebf2';x.lineWidth=2;x.beginPath();for(let i=0;i<d.length;i+=2){const X=i/d.length*w,Y=d[i]/255*h;i?x.lineTo(X,Y):x.moveTo(X,Y)}x.stroke()}
+
+/* keyboard */
+addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+  const k=document.createElement('span');k.className='chip';k.style.cssText='transition:all .6s;background:var(--rasp);color:#fff';
+  k.textContent=e.key===' '?'Space':e.key.length>1?e.key:e.key.toUpperCase();const box=$('#keys');box.prepend(k);
+  while(box.childElementCount>24) box.lastChild.remove(); setTimeout(()=>k.style.background='var(--panel)',30);
+  if(AC&&VIEW==='io'&&e.key.length===1) note(220*2**((e.key.charCodeAt(0)%24)/12),AC.currentTime,.4,'triangle')});
+
+/* ---------------- WebGL2 ray marcher ---------------- */
+const FS=`#version 300 es
+precision highp float;
+uniform vec2 R;uniform float T;uniform int STEPS;uniform int BALLS;uniform int REFL;
+out vec4 o;
+float smin(float a,float b,float k){float h=clamp(.5+.5*(b-a)/k,0.,1.);return mix(b,a,h)-k*h*(1.-h);}
+vec3 ballPos(int i){float f=float(i);return vec3(sin(T*.7+f*1.7)*1.7,sin(T*1.1+f*2.3)*.6+.35,cos(T*.55+f*1.3)*1.7);}
+vec2 map(vec3 p){
+  float fl=p.y+1.0;
+  float m=1e5;
+  for(int i=0;i<16;i++){if(i>=BALLS)break;m=smin(m,length(p-ballPos(i))-.42,.55);}
+  float tor=length(vec2(length(p.xz)-2.6,p.y+.55))-.12;
+  m=min(m,tor);
+  return fl<m?vec2(fl,0.):vec2(m,1.);
+}
+vec3 nrm(vec3 p){vec2 e=vec2(.0015,-.0015);return normalize(e.xyy*map(p+e.xyy).x+e.yyx*map(p+e.yyx).x+e.yxy*map(p+e.yxy).x+e.xxx*map(p+e.xxx).x);}
+vec2 march(vec3 ro,vec3 rd){float t=0.;for(int i=0;i<256;i++){if(i>=STEPS)break;vec2 h=map(ro+rd*t);if(h.x<.001*t)return vec2(t,h.y);t+=h.x;if(t>40.)break;}return vec2(-1.);}
+float shadow(vec3 ro,vec3 rd){float r=1.,t=.03;for(int i=0;i<64;i++){if(i>=STEPS/3)break;float h=map(ro+rd*t).x;r=min(r,10.*h/t);t+=clamp(h,.02,.3);if(r<.001||t>8.)break;}return clamp(r,0.,1.);}
+float ao(vec3 p,vec3 n){float o=0.,s=1.;for(int i=1;i<6;i++){float h=.06*float(i);o+=(h-map(p+n*h).x)*s;s*=.7;}return clamp(1.-2.*o,0.,1.);}
+vec3 sky(vec3 rd){return mix(vec3(.02,.02,.05),vec3(.25,.05,.12),pow(max(rd.y+.2,0.),.6))+vec3(1.,.4,.6)*pow(max(dot(rd,normalize(vec3(.6,.35,-.5))),0.),40.);}
+vec3 shade(vec3 ro,vec3 rd,out vec3 hp,out vec3 hn,out float refl){
+  vec2 h=march(ro,rd);refl=0.;
+  if(h.x<0.)return sky(rd);
+  vec3 p=ro+rd*h.x,n=nrm(p);hp=p;hn=n;
+  vec3 L=normalize(vec3(.6,.8,-.5));
+  vec3 col;
+  if(h.y<.5){float c=mod(floor(p.x*1.)+floor(p.z*1.),2.);col=mix(vec3(.05,.06,.08),vec3(.13,.15,.2),c);refl=.45;}
+  else{col=mix(vec3(.89,.16,.37),vec3(.42,.75,.29),.5+.5*sin(p.y*3.+T));refl=.25;}
+  float dif=max(dot(n,L),0.)*shadow(p+n*.01,L);
+  float spe=pow(max(dot(reflect(rd,n),L),0.),48.);
+  float a=ao(p,n);
+  vec3 c=col*(.12*a+dif*vec3(1.,.95,.9))+spe*dif*.9+col*.25*max(n.y,0.)*vec3(.4,.2,.5)*a;
+  return mix(c,sky(rd),1.-exp(-.0025*h.x*h.x));
+}
+void main(){
+  vec2 uv=(gl_FragCoord.xy*2.-R)/R.y;
+  float a=T*.15;vec3 ro=vec3(sin(a)*5.5,1.6+sin(T*.2)*.4,cos(a)*5.5);
+  vec3 f=normalize(-ro+vec3(0.,.2,0.)),r=normalize(cross(vec3(0,1,0),f)),u=cross(f,r);
+  vec3 rd=normalize(uv.x*r+uv.y*u+1.6*f);
+  vec3 hp,hn;float rf;
+  vec3 col=shade(ro,rd,hp,hn,rf);
+  if(REFL==1&&rf>0.){vec3 hp2,hn2;float rf2;vec3 rr=reflect(rd,hn);col=mix(col,shade(hp+hn*.02,rr,hp2,hn2,rf2),rf*.6);}
+  col=pow(col/(1.+col),vec3(.4545));
+  col*=1.-.25*dot(uv*.5,uv*.5);
+  o=vec4(col,1.);
+}`;
+class Raymarcher{
+  constructor(canvas,hud){this.c=canvas;this.hud=hud;this.run=false;this.p={res:.6,steps:80,balls:7,refl:1};this.fps=0;this.frames=[];this.mpix=0;
+    const gl=this.gl=canvas.getContext('webgl2',{antialias:false,powerPreference:'high-performance'});
+    if(!gl){hud.textContent='WebGL2 not available in this browser';return}
+    const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o};
+    const pr=this.pr=gl.createProgram();
+    try{gl.attachShader(pr,sh(gl.VERTEX_SHADER,'#version 300 es\nin vec2 p;void main(){gl_Position=vec4(p,0,1);}'));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS));}
+    catch(e){hud.textContent='Shader error: '+e;this.gl=null;return}
+    gl.linkProgram(pr);gl.useProgram(pr);
+    const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    const loc=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+    this.u={};for(const n of['R','T','STEPS','BALLS','REFL'])this.u[n]=gl.getUniformLocation(pr,n);
+    const dbg=gl.getExtension('WEBGL_debug_renderer_info');this.renderer=dbg?gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);
+    this.t0=performance.now();
+  }
+  start(){if(!this.gl||this.run)return;this.run=true;this.frames=[];const loop=t=>{if(!this.run)return;this.draw(t);requestAnimationFrame(loop)};requestAnimationFrame(loop)}
+  stop(){this.run=false}
+  render(w,h,t){const gl=this.gl;
+    gl.viewport(0,0,w,h);gl.uniform2f(this.u.R,w,h);gl.uniform1f(this.u.T,t);
+    gl.uniform1i(this.u.STEPS,this.p.steps);gl.uniform1i(this.u.BALLS,this.p.balls);gl.uniform1i(this.u.REFL,this.p.refl);
+    gl.drawArrays(gl.TRIANGLES,0,3)}
+  draw(now){const c=this.c,r=c.getBoundingClientRect(),d=(devicePixelRatio||1)*this.p.res;
+    const w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h}
+    this.render(w,h,(now-this.t0)/1000);
+    this.frames.push(now);while(this.frames.length&&now-this.frames[0]>1000)this.frames.shift();
+    this.fps=this.frames.length;this.mpix=w*h*this.fps/1e6;
+    if(this.frames.length%10===0)this.hud.innerHTML=`${this.fps} fps · ${w}×${h}<br>${this.mpix.toFixed(1)} Mpixel/s · ${this.p.steps} steps · ${this.p.balls} blobs${this.p.refl?' · reflections':''}<br>GPU ${LIVE.v3d||'–'} MHz`;
+  }
+}
+const gpuMain=new Raymarcher($('#gpuCanvas'),$('#gpuHud'));
+const odGpu=new Raymarcher($('#odCanvas'),$('#odHud'));
+$('#gpuInfo').textContent=gpuMain.renderer?'Renderer: '+gpuMain.renderer:'';
+const bindRange=(id,key,fmt)=>{const e=$(id),v=$(id+'V'),f=()=>{gpuMain.p[key]=+e.value;v.textContent=fmt(+e.value)};e.oninput=f;f()};
+bindRange('#gpuRes','res',v=>Math.round(v*100)+'% of screen');bindRange('#gpuSteps','steps',v=>v+' per ray');bindRange('#gpuBalls','balls',v=>v+' metaballs');
+$('#gpuRefl').onchange=e=>gpuMain.p.refl=+e.target.value;
+$('#gpuToggle').onclick=e=>{if(gpuMain.run){gpuMain.stop();e.target.textContent='▶ Start render';gpuMain.hud.innerHTML+='<br>paused'}else{gpuMain.start();e.target.textContent='❚❚ Pause'}};
+
+/* GPU benchmark: fixed 640x360 off-screen render, timed with readPixels so vsync doesn't cap it */
+const GB={w:640,h:360,p:{res:1,steps:48,balls:5,refl:0}};
+async function gpuBench(secs,onProg){
+  const c=document.createElement('canvas');c.width=GB.w;c.height=GB.h;
+  const rm=new Raymarcher(c,{});if(!rm.gl) return null;
+  rm.p={...GB.p};const gl=rm.gl,px=new Uint8Array(4),frame=()=>new Promise(r=>requestAnimationFrame(r));
+  rm.render(GB.w,GB.h,0);gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);   // warm-up: shader compile
+  let frames=0,busy=0,k=1;const t0=performance.now();
+  while(performance.now()-t0<secs*1000){
+    await frame();const s=performance.now();
+    for(let i=0;i<k;i++) rm.render(GB.w,GB.h,(frames+i)/30);
+    gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);
+    const dt=performance.now()-s;busy+=dt;frames+=k;
+    k=Math.max(1,Math.min(60,Math.round(k*30/Math.max(dt,1))));   // ~30 ms batches keep the desktop usable
+    if(onProg)onProg((performance.now()-t0)/(secs*1000));
+  }
+  const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();
+  const sec=busy/1000;return {mpix:frames*GB.w*GB.h/sec/1e6,fps:frames/sec};
+}
+
+/* ---------------- COMPARE & OC ---------------- */
+// Ratios vs a stock Raspberry Pi 5 / 500. CPU single (cpu1) and multi (cpuN) are relative to Pi 5 *single-core*;
+// gpu relative to Pi 5. mem (GB/s copy) and disk (MB/s read) are absolute. All estimates for these Python/WebGL tests.
+const REFS=[
+ {n:'Pentium III 1 GHz',y:2000,cpu1:.12,cpuN:.12,gpu:null,mem:.6,disk:30,d:'1 core · PC133 SDRAM · IDE hard drive'},
+ {n:'Pentium 4 3.0 GHz HT',y:2004,cpu1:.25,cpuN:.31,gpu:.35,mem:1.6,disk:55,d:'1 core + Hyper-Threading · DDR400 · GeForce 6800-class'},
+ {n:'Core 2 Duo E6600',y:2006,cpu1:.45,cpuN:.88,gpu:2,mem:2.8,disk:75,d:'2 cores · DDR2 · GeForce 8800-class'},
+ {n:'Core i5-2500K',y:2011,cpu1:.95,cpuN:3.6,gpu:6,mem:7,disk:500,d:'4 cores · DDR3 · SATA SSD · GTX 560-class'},
+ {n:'Core i7-4790K',y:2014,cpu1:1.3,cpuN:6.4,gpu:16,mem:9,disk:520,d:'4 cores / 8 threads · DDR3 · SATA SSD · GTX 970-class'},
+ {n:'Raspberry Pi 3 B+',y:2018,cpu1:.18,cpuN:.68,gpu:null,mem:1.1,disk:22,d:'4× Cortex-A53 1.4 GHz · GPU too old for WebGL2'},
+ {n:'Raspberry Pi 4 / Pi 400',y:2019,cpu1:.4,cpuN:1.55,gpu:.33,mem:2.2,disk:45,d:'4× Cortex-A72 1.8 GHz · VideoCore VI'},
+ {n:'Raspberry Pi Zero 2 W',y:2021,cpu1:.13,cpuN:.48,gpu:null,mem:.9,disk:22,d:'4× Cortex-A53 1 GHz · GPU too old for WebGL2'},
+ {n:'Raspberry Pi 5 / Pi 500',y:2023,cpu1:1,cpuN:3.9,gpu:1,mem:5,disk:90,d:'4× Cortex-A76 2.4 GHz · VideoCore VII · stock',anchor:true},
+ {n:'Ryzen AI Max+ 395 mini PC',y:2025,cpu1:3,cpuN:50,gpu:45,mem:25,disk:4000,d:'16 cores / 32 threads Zen 5 · Radeon 8060S · NVMe'},
+];
+const EST={cpu1:50000,cpuN:195000,gpu:3};   // built-in Pi 5 guesses, replaced by your stock baseline once saved
+const METRICS=[
+ {k:'idx',t:'Overdrive Index',u:'',f:v=>Math.round(v).toLocaleString()},
+ {k:'cpu1',t:'CPU 1 core',u:'pts/s',f:v=>(v/1000).toFixed(1)+'k'},
+ {k:'cpuN',t:'CPU all cores',u:'pts/s',f:v=>(v/1000).toFixed(v<1e5?1:0)+'k'},
+ {k:'gpu',t:'GPU',u:'Mpix/s',f:v=>v.toFixed(v<10?2:1)},
+ {k:'mem',t:'RAM',u:'GB/s',f:v=>v.toFixed(1)},
+ {k:'disk_r',t:'Storage read',u:'MB/s',f:v=>v<1000?v.toFixed(0):(v/1000).toFixed(1)+'k'},
+];
+let RUNS={runs:[],baseline:null}, OC=null, PENDING=null, METRIC='idx';
+function anchor(){
+  const b=RUNS.runs.find(r=>r.id===RUNS.baseline);
+  const pi5=/Raspberry Pi (5|500|Compute Module 5)/.test(INFO.model||'');
+  if(b&&pi5&&b.cpu1&&b.cpuN) return {cpu1:b.cpu1,cpuN:b.cpuN,gpu:b.gpu||EST.gpu,cal:b.name};
+  return {...EST,cal:null};
+}
+function refVals(r,A){return {cpu1:r.cpu1*A.cpu1,cpuN:r.cpuN/3.9*A.cpuN,gpu:r.gpu==null?null:r.gpu*A.gpu,mem:r.mem,disk_r:r.disk}}
+function index(v,A){const parts=[v.cpu1/A.cpu1,v.cpuN/A.cpuN,v.gpu!=null?v.gpu/A.gpu:null,v.mem/5].filter(x=>x>0);
+  return parts.length?1000*Math.exp(parts.reduce((s,x)=>s+Math.log(x),0)/parts.length):0}
+async function loadCompare(){
+  [RUNS,OC]=await Promise.all([api('/api/runs'),api('/api/oc')]);
+  renderCompare();renderRuns();renderOC();
+}
+function rows(){
+  const A=anchor(),out=[];
+  REFS.forEach(r=>{const v=refVals(r,A);v.idx=index(v,A);out.push({name:r.n,sub:r.y+' · '+r.d,v,cls:'',ref:true,noGpu:r.gpu==null})});
+  RUNS.runs.forEach(r=>{const v={...r};v.idx=index(v,A);out.push({name:(r.id===RUNS.baseline?'★ ':'')+r.name,sub:'yours · '+new Date(r.ts*1000).toLocaleDateString()+cfgShort(r.config),v,cls:'me'})});
+  if(PENDING){const v={...PENDING};v.idx=index(v,A);out.push({name:'This run (not saved)',sub:'just now'+cfgShort(PENDING.config),v,cls:'new'})}
+  return {A,out};
+}
+const cfgShort=c=>c&&c.arm_freq?` · CPU ${c.arm_freq} MHz${c.gpu_freq?' / GPU '+c.gpu_freq:''}`:'';
+function renderCompare(){
+  $('#metricTabs').innerHTML=METRICS.map(m=>`<button data-k="${m.k}" class="${m.k===METRIC?'on':''}">${m.t}</button>`).join('');
+  $$('#metricTabs button').forEach(b=>b.onclick=()=>{METRIC=b.dataset.k;renderCompare()});
+  const {A,out}=rows(),M=METRICS.find(m=>m.k===METRIC),log=$('#logScale').checked;
+  const list=out.filter(r=>r.v[METRIC]>0).sort((a,b)=>b.v[METRIC]-a.v[METRIC]);
+  const mine=out.filter(r=>!r.ref&&r.v[METRIC]>0), best=mine.length?Math.max(...mine.map(r=>r.v[METRIC])):null;
+  const vals=list.map(r=>r.v[METRIC]),mx=Math.max(...vals),mn=Math.min(...vals)*0.6;
+  const width=v=>log?100*Math.log(v/mn)/Math.log(mx/mn):100*v/mx;
+  $('#cmpBars').innerHTML=list.map(r=>{const v=r.v[METRIC];
+    const rel=best&&r.ref?(best/v>=1?`you're ${(best/v).toFixed(best/v<10?1:0)}× faster`:`${(v/best).toFixed(1)}× faster than you`):'';
+    return `<div class="cr ${r.cls}" title="${esc(r.sub)}"><div class="nm">${esc(r.name)}<br><small>${esc(r.sub)}</small></div>
+      <div class="tr"><div class="fl" style="width:${Math.max(1,width(v)).toFixed(1)}%"></div></div>
+      <div class="vl">${M.f(v)} ${M.u}<small>${rel}</small></div></div>`}).join('')
+    +(METRIC==='gpu'?'<p class="note">Pi 3, Pi Zero 2 and the Pentium III have no WebGL2 GPU, so they can\'t run this test.</p>':'');
+  // headline uses your best index
+  const bi=mine.length?mine.reduce((a,b)=>b.v.idx>a.v.idx?b:a):null;
+  if(bi){const R=n=>out.find(r=>r.name===n).v.idx,x=n=>{const q=bi.v.idx/R(n);return q>=1?q.toFixed(q<10?1:0)+'×':Math.round(q*100)+'%'};
+    $('#headline').innerHTML=`Your best: <b>${esc(bi.name.replace('★ ',''))}</b>, Overdrive Index <b style="color:var(--rasp2)">${Math.round(bi.v.idx).toLocaleString()}</b>. That's <b>${x('Pentium 4 3.0 GHz HT')}</b> a Pentium 4, <b>${x('Raspberry Pi 4 / Pi 400')}</b> a Pi 4 / Pi 400, and <b>${x('Ryzen AI Max+ 395 mini PC')}</b> of your Ryzen AI Max+ 395.`}
+  else $('#headline').textContent='Run the full benchmark to put your Pi on the chart.';
+  $('#calNote').innerHTML=A.cal?`Reference CPU and GPU scores are scaled from your stock baseline <b>${esc(A.cal)}</b>, using published performance ratios between these machines. RAM and storage references are typical numbers. All reference numbers are estimates.`
+    :'Reference numbers are estimates. Save a run at <b>stock clocks</b> and it becomes your baseline, so the reference bars get scaled from a real measurement of your Pi.';
+}
+$('#logScale').onchange=renderCompare;
+function renderRuns(){
+  const b=RUNS.runs.find(r=>r.id===RUNS.baseline),A=anchor();
+  const pct=(v,bv)=>!b||!bv||!v?'':(()=>{const d=100*(v/bv-1);return ` <span class="delta ${d>=0?'up':'dn'}">${d>=0?'+':''}${d.toFixed(1)}%</span>`})();
+  if(!RUNS.runs.length){$('#runsTbl').innerHTML='<tr><td class="note">No saved runs yet.</td></tr>';return}
+  $('#runsTbl').innerHTML='<tr><th>Run</th><th>Clocks (config)</th><th>Peak clocks</th><th>Peak temp</th><th>Throttled?</th><th>CPU 1</th><th>CPU all</th><th>GPU Mpix/s</th><th>RAM</th><th>Disk read</th><th>Index</th><th></th></tr>'
+   +RUNS.runs.map(r=>{const isB=r.id===RUNS.baseline,c=r.config||{},idx=index(r,A),bidx=b?index(b,A):0;
+    return `<tr><td><b>${isB?'★ ':''}${esc(r.name)}</b><div class="note">${new Date(r.ts*1000).toLocaleString()}</div></td>
+     <td>${c.arm_freq||'–'} / ${c.gpu_freq||c.v3d_freq||'–'} MHz${c.over_voltage_delta&&c.over_voltage_delta!=='0'?'<div class="note">+'+(c.over_voltage_delta/1000)+' mV</div>':''}</td>
+     <td>${r.peak_arm?(r.peak_arm/1000).toFixed(2)+' GHz':'–'} / ${r.peak_v3d||'–'} MHz</td>
+     <td>${r.peak_temp?r.peak_temp+' °C':'–'}</td>
+     <td>${r.thr&&r.thr.length?'<span class="delta dn">⚠ '+esc(r.thr.join(', '))+'</span>':'<span class="delta up">no</span>'}</td>
+     <td>${(r.cpu1/1000).toFixed(1)}k${isB?'':pct(r.cpu1,b&&b.cpu1)}</td><td>${(r.cpuN/1000).toFixed(0)}k${isB?'':pct(r.cpuN,b&&b.cpuN)}</td>
+     <td>${r.gpu?r.gpu.toFixed(2):'–'}${isB?'':pct(r.gpu,b&&b.gpu)}</td><td>${r.mem?r.mem.toFixed(2):'–'}${isB?'':pct(r.mem,b&&b.mem)}</td>
+     <td>${r.disk_r?Math.round(r.disk_r):'–'}${isB?'':pct(r.disk_r,b&&b.disk_r)}</td><td><b>${Math.round(idx)}</b>${isB?'':pct(idx,bidx)}</td>
+     <td style="white-space:nowrap">${isB?'':`<button class="btn ghost mini" data-b="${r.id}" title="Make this the stock baseline">★</button>`}
+       <button class="btn ghost mini" data-r="${r.id}" title="Rename">✎</button><button class="btn ghost mini" data-d="${r.id}" title="Delete">✕</button></td></tr>`}).join('');
+  $$('#runsTbl [data-b]').forEach(e=>e.onclick=async()=>{RUNS=await post('/api/runs/baseline',{id:e.dataset.b});renderCompare();renderRuns()});
+  $$('#runsTbl [data-d]').forEach(e=>e.onclick=async()=>{if(e.dataset.sure){RUNS=await post('/api/runs/delete',{id:e.dataset.d});renderCompare();renderRuns()}else{e.dataset.sure=1;e.textContent='sure?'}});
+  $$('#runsTbl [data-r]').forEach(e=>e.onclick=()=>{const td=e.closest('tr').firstElementChild,r=RUNS.runs.find(x=>x.id===e.dataset.r);
+    td.innerHTML=`<div class="row"><input class="name" value="${esc(r.name)}"><button class="btn mini">OK</button></div>`;
+    const inp=td.querySelector('input'),ok=async()=>{RUNS=await post('/api/runs/rename',{id:r.id,name:inp.value});renderCompare();renderRuns()};
+    td.querySelector('button').onclick=ok;inp.onkeydown=ev=>{if(ev.key==='Enter')ok()};inp.focus()});
+}
+function renderOC(){ if(!OC) return; const c=OC.current||{};
+  $('#cfgPath').textContent=OC.config_path;
+  $('#ocNow').innerHTML=!OC.pi5?'Overclock presets are for the Raspberry Pi 5 / 500. This machine is <b>'+esc(INFO.model||'unknown')+'</b>.'
+    :`Firmware settings right now: CPU <b>${c.arm_freq||'?'} MHz</b> · GPU <b>${c.gpu_freq||c.v3d_freq||'?'} MHz</b>${c.over_voltage_delta&&c.over_voltage_delta!=='0'?' · voltage +<b>'+(c.over_voltage_delta/1000)+' mV</b>':''} · saved preset: <b>${OC.active==='custom'?'custom / none':esc(OC.presets[OC.active].name)}</b>
+     <br>Live ARM clock: <b>${LIVE.arm?(LIVE.arm/1000).toFixed(2)+' GHz':'–'}</b>. Settings saved in config.txt take effect after a reboot.`;
+  $('#ocPresets').innerHTML=Object.entries(OC.presets).map(([k,p])=>`<div class="preset ${OC.active===k?'on':''}"><b>${esc(p.name)}</b>
+     <span>${esc(p.desc)}</span><code>${p.lines.length?esc(p.lines.join('\n')):'(no extra lines)'}</code>
+     <button class="btn ${OC.active===k?'ghost':''} mini" data-p="${k}" ${OC.pi5&&OC.pkexec?'':'disabled'}>${OC.active===k?'Saved':'Use '+esc(p.name)}</button></div>`).join('');
+  $$('#ocPresets [data-p]').forEach(b=>b.onclick=async()=>{$$('#ocPresets button').forEach(x=>x.disabled=true);
+    const j=await run('oc',{preset:b.dataset.p});OC=await api('/api/oc');renderOC();
+    if(j.state==='done') $('#rebootRow').style.display='flex'});
+}
+$('#rebootBtn').onclick=async e=>{const b=e.currentTarget;if(!b.dataset.sure){b.dataset.sure=1;b.textContent='Click again to reboot';return}
+  const r=await post('/api/reboot');if(!r.ok){b.textContent='Reboot failed. Reboot from the menu';}};
+
+$('#benchRun').onclick=async()=>{
+  const btn=$('#benchRun'),P=$('#prog-bench'),bar=P.querySelector('i'),msg=P.querySelector('.msg');
+  const stage=(lo,hi,text)=>j=>{bar.style.width=(lo+(hi-lo)*(j.progress||0)/100)+'%';msg.textContent=text+(j.msg&&j.state==='running'?' · '+j.msg:'')};
+  btn.disabled=true;gpuMain.stop();$('#benchOut').innerHTML='';
+  await post('/api/peaks/reset');
+  const cpu=await run('cpu',{seconds:5},null,stage(0,45,'CPU'));
+  const mem=await run('mem',{},null,stage(45,58,'RAM'));
+  const disk=await run('disk',{mb:256},null,stage(58,75,'Storage'));
+  msg.textContent='GPU (the pointer may lag for a few seconds)…';
+  const gpu=await gpuBench(8,f=>bar.style.width=(75+25*Math.min(1,f))+'%');
+  await new Promise(r=>setTimeout(r,1100));
+  const L=await api('/api/live'),pk=L.peaks||{},oc=await api('/api/oc');
+  bar.style.width='100%';msg.textContent='Done';btn.disabled=false;
+  if(cpu.state!=='done'){msg.textContent='⚠ CPU test failed: '+cpu.msg;return}
+  PENDING={cpu1:cpu.result.single,cpuN:cpu.result.multi,mem:mem.result?mem.result.dram_gbs:null,
+    disk_r:disk.result?disk.result.read_mbs:null,disk_w:disk.result?disk.result.write_mbs:null,
+    gpu:gpu?gpu.mpix:null,gpu_fps:gpu?gpu.fps:null,peak_temp:pk.temp||null,peak_watts:pk.watts||null,
+    peak_arm:pk.arm||null,peak_v3d:pk.v3d||null,thr:pk.thr||[],config:oc.current||{}};
+  const c=PENDING.config,suggest=!RUNS.runs.length?'Stock':(oc.active!=='custom'&&oc.active!=='stock'?OC_NAME(oc):'')+(c.arm_freq?` CPU ${c.arm_freq} / GPU ${c.gpu_freq||c.v3d_freq||'?'}`:' Run '+(RUNS.runs.length+1));
+  $('#benchOut').innerHTML=`<div class="result">${tile((PENDING.cpu1/1000).toFixed(1)+'k','CPU 1 core')}${tile((PENDING.cpuN/1000).toFixed(0)+'k','CPU all cores')}
+    ${tile(PENDING.gpu?PENDING.gpu.toFixed(2):'–','GPU Mpix/s')}${tile(PENDING.mem??'–','RAM GB/s')}${tile(PENDING.disk_r?Math.round(PENDING.disk_r):'–','disk read MB/s')}
+    ${tile(PENDING.peak_temp?PENDING.peak_temp+' °C':'–','peak temp')}</div>
+    ${PENDING.thr.length?'<p class="note" style="color:var(--amber)">⚠ Throttled during the run ('+esc(PENDING.thr.join(', '))+'). Scores may be lower than the chip can do.</p>':''}
+    <div class="row" style="margin-top:10px"><input class="name" id="runName" value="${esc(suggest.trim())}" maxlength="60"><button class="btn" id="saveRun">Save run</button></div>
+    ${!RUNS.runs.length?'<p class="note">Your first saved run becomes the stock baseline. Save it at factory clocks.</p>':''}`;
+  $('#saveRun').onclick=async()=>{RUNS=await post('/api/runs/add',{...PENDING,name:$('#runName').value});PENDING=null;
+    $('#benchOut').innerHTML='<p class="note" style="color:var(--leaf)">✓ Saved</p>';renderCompare();renderRuns()};
+  renderCompare();
+};
+const OC_NAME=oc=>oc.presets[oc.active].name+' ·';
+
+/* ---------------- OVERDRIVE ---------------- */
+$('#engage').onclick=async()=>{
+  const btn=$('#engage');btn.disabled=true;$('#odReport').style.display='none';
+  const SECS=20; await post('/api/peaks/reset');
+  odGpu.p={res:.5,steps:128,balls:12,refl:1}; odGpu.start();
+  $('#odMsg').textContent='All cores + GPU + LEDs flat out…';
+  const gpuSamples=[];const t0=Date.now();
+  const timer=setInterval(()=>{const left=Math.max(0,SECS-(Date.now()-t0)/1000);$('#odCount').textContent=left.toFixed(1)+' s';
+    if(odGpu.fps)gpuSamples.push([odGpu.fps,odGpu.mpix])},250);
+  run('leds',{seconds:SECS});
+  const cpu=await run('cpu',{mode:'stress',seconds:SECS});
+  clearInterval(timer);odGpu.stop();
+  $('#odCount').textContent='Memory blast…';$('#odMsg').textContent='';
+  const mem=await run('mem');
+  await new Promise(r=>setTimeout(r,1100));
+  const L=await api('/api/live'),P=L.peaks||{};
+  const avg=i=>gpuSamples.length?gpuSamples.reduce((s,v)=>s+v[i],0)/gpuSamples.length:0;
+  const cpuS=cpu.result?cpu.result.multi/400:0, gpuS=avg(1)*odGpu.p.steps/8, memS=mem.result?mem.result.dram_gbs*120:0;
+  const score=Math.round(cpuS+gpuS+memS);
+  $('#odCount').textContent='Complete';
+  $('#odReport').style.display='';
+  const sc=$('#odScore');let n=0;const anim=setInterval(()=>{n=Math.min(score,n+Math.ceil(score/40));sc.textContent=n.toLocaleString();if(n>=score)clearInterval(anim)},30);
+  const thr=L.throttled;
+  $('#odRes').innerHTML=tile(Math.round(cpuS),'CPU points')+tile(Math.round(gpuS),'GPU points')+tile(Math.round(memS),'memory points')
+    +tile(cpu.result?(cpu.result.multi/1000).toFixed(1)+'k':'–','points/s, 4 cores')+tile(avg(0).toFixed(0)+' fps','GPU avg at max detail')
+    +tile(avg(1).toFixed(1),'Mpixel/s ray-marched')+tile(mem.result?mem.result.dram_gbs+' GB/s':'–','RAM copy')
+    +tile(P.temp?P.temp+' °C':'–','peak temp')+tile(P.watts?P.watts.toFixed(2)+' W':'n/a','peak PMIC power')
+    +tile(P.arm?(P.arm/1000).toFixed(2)+' GHz':'–','peak ARM clock')+tile(P.v3d?P.v3d+' MHz':'–','peak GPU clock')
+    +tile(P.thr&&P.thr.length?'⚠ '+P.thr[0]:'✓ clean','throttling during run');
+  btn.disabled=false;
+};
+
+/* ---------------- boot ---------------- */
+loadInfo().then(()=>{renderDrives();renderIfaces()});
+tick(true); setInterval(()=>tick(false),1000);
+(function radarLoop(t){drawRadar(t||0);requestAnimationFrame(radarLoop)})();
+addEventListener('resize',()=>tick(false));
+</script>
+</body>
+</html>
